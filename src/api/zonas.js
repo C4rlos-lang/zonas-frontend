@@ -16,7 +16,9 @@ export const eliminarZona = (id) => api.delete('/zonas/' + id, {
   headers: { 'x-api-key': API_KEY }
 })
 
-export const verificarPunto = (lat, lon) => api.post('/zonas/verificar', { lat, lon })
+export const verificarPunto = (lat, lon) => api.post('/zonas/verificar', { lat, lon }, {
+  headers: { 'x-api-key': API_KEY }
+})
 
 export const registro = (data) => api.post('/auth/registro', data)
 
