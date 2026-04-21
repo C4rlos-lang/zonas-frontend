@@ -17,3 +17,27 @@ export const eliminarZona = (id) => api.delete('/zonas/' + id, {
 })
 
 export const verificarPunto = (lat, lon) => api.post('/zonas/verificar', { lat, lon })
+
+export const registro = (data) => api.post('/auth/registro', data)
+
+export const login = (data) => api.post('/auth/login', data)
+
+export const getMisKeys = (token) => api.get('/mis-keys', {
+  headers: { 'Authorization': 'Bearer ' + token }
+})
+
+export const crearMiKey = (token, nombre) => api.post('/mis-keys', { nombre: nombre }, {
+  headers: { 'Authorization': 'Bearer ' + token }
+})
+
+export const revocarMiKey = (token, id) => api.delete('/mis-keys/' + id, {
+  headers: { 'Authorization': 'Bearer ' + token }
+})
+
+export const getMiConsumo = (token) => api.get('/mi-consumo', {
+  headers: { 'Authorization': 'Bearer ' + token }
+})
+
+export const validarToken = (token) => api.get('/mis-keys', {
+  headers: { 'Authorization': 'Bearer ' + token }
+})
