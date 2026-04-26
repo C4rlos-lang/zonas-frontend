@@ -43,3 +43,15 @@ export const getMiConsumo = (token) => api.get('/mi-consumo', {
 export const validarToken = (token) => api.get('/mis-keys', {
   headers: { 'Authorization': 'Bearer ' + token }
 })
+
+export const getMiPlan = (token) => api.get('/mi-plan', {
+  headers: { 'Authorization': 'Bearer ' + token }
+})
+
+export const crearPago = (token, plan) => api.post('/pagos/crear', { plan: plan }, {
+  headers: { 'Authorization': 'Bearer ' + token }
+})
+
+export const verificarPago = (token, referencia) => api.get('/pagos/verificar/' + referencia, {
+  headers: { 'Authorization': 'Bearer ' + token }
+})

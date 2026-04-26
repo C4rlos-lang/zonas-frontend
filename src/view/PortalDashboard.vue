@@ -8,9 +8,27 @@
       </div>
 
       <div class="panel-section">
+        <div class="panel-label">Mi plan</div>
+        <div class="plan-card" :class="planInfo.plan">
+          <div class="plan-name">{{ planInfo.plan.toUpperCase() }}</div>
+          <div class="plan-consultas">
+            <span class="plan-val">{{ planInfo.consultas_restantes }}</span>
+            <span class="plan-de"> / {{ planInfo.consultas_mes }}</span>
+          </div>
+          <div class="plan-bar-bg">
+            <div class="plan-bar-fill" :style="{ width: porcentajeUso + '%' }"></div>
+          </div>
+          <div class="plan-bar-label">Consultas restantes este mes</div>
+        </div>
+        <button v-if="planInfo.plan === 'starter'" class="btn-upgrade" @click="iniciarPago('business')">
+          Upgrade a Business - $49/mes
+        </button>
+      </div>
+
+      <div class="panel-section">
         <div class="panel-label">
           Mis API Keys
-          <span class="badge">{{ keys.length }}/5</span>
+          <span class="badge">{{ keys.length }}/{{ planInfo.max_api_keys }}</span>
         </div>
 
         <div v-for="key in keys" :key="key.id" class="key-card">
@@ -72,7 +90,7 @@
     <div class="dash-main">
       <div class="welcome">
         <div class="welcome-title">Bienvenido, {{ cliente.nombre }}</div>
-        <div class="welcome-sub">Desde aqui puedes gestionar tus API Keys y monitorear el consumo de tu cuenta.</div>
+        <div class="welcome-sub">Desde aqui puedes gestionar tus API Keys, monitorear el consumo y administrar tu plan.</div>
       </div>
 
       <div class="cards-grid">
@@ -98,6 +116,14 @@
           <div class="info-text">Visualiza cuantas peticiones has realizado desde tu cuenta</div>
         </div>
       </div>
+
+      <div v-if="planInfo.plan === 'starter'" class="upgrade-banner">
+        <div class="upgrade-info">
+          <div class="upgrade-title">Desbloquea mas poder</div>
+          <div class="upgrade-text">Con el plan Business obtienes 50,000 consultas/mes, 5 API Keys y soporte prioritario.</div>
+        </div>
+        <button class="btn-upgrade-lg" @click="iniciarPago('business')">Upgrade a Business - $49/mes</button>
+      </div>
     </div>
 
     <div v-if="toast.visible" class="toast-msg" :class="toast.type">
@@ -107,18 +133,24 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { getMisKeys, crearMiKey, revocarMiKey, getMiConsumo } from '../api/zonas.js'
+import { getMisKeys, crearMiKey, revocarMiKey, getMiConsumo, getMiPlan, crearPago, verificarPago } from '../api/zonas.js'
 
 const router = useRouter()
 const cliente = ref({})
 const keys = ref([])
 const consumo = reactive({ total: 0 })
+const planInfo = reactive({ plan: 'starter', consultas_restantes: 0, consultas_mes: 1000, max_api_keys: 1 })
 const nuevaKeyNombre = ref('')
 const toast = ref({ visible: false, msg: '', type: '' })
 
-onMounted(async () => {
+const porcentajeUso = computed(function() {
+  if (planInfo.consultas_mes === 0) return 0
+  return Math.round((planInfo.consultas_restantes / planInfo.consultas_mes) * 100)
+})
+
+onMounted(async function() {
   var token = localStorage.getItem('gz_token')
   var clienteStr = localStorage.getItem('gz_cliente')
   if (!token || !clienteStr) {
@@ -128,6 +160,29 @@ onMounted(async () => {
   cliente.value = JSON.parse(clienteStr)
   await cargarKeys()
   await cargarConsumo()
+  await cargarPlan()
+
+  var pendingRef = localStorage.getItem('gz_pago_ref')
+  if (pendingRef) {
+    try {
+      var token2 = localStorage.getItem('gz_token')
+      var resultado = await verificarPago(token2, pendingRef)
+      var pagoData = resultado.data
+      if (pagoData.estado === 'APPROVED') {
+        localStorage.removeItem('gz_pago_ref')
+        localStorage.removeItem('gz_pago_plan')
+        showToast('Pago aprobado. Plan actualizado a ' + pagoData.plan, 'success')
+        await cargarPlan()
+      } else {
+        localStorage.removeItem('gz_pago_ref')
+        localStorage.removeItem('gz_pago_plan')
+        showToast('El pago no fue aprobado: ' + pagoData.estado, 'error')
+      }
+    } catch (err) {
+      localStorage.removeItem('gz_pago_ref')
+      localStorage.removeItem('gz_pago_plan')
+    }
+  }
 })
 
 async function cargarKeys() {
@@ -149,6 +204,19 @@ async function cargarConsumo() {
     consumo.total = data.total
   } catch (err) {
     consumo.total = 0
+  }
+}
+
+async function cargarPlan() {
+  var token = localStorage.getItem('gz_token')
+  try {
+    const { data } = await getMiPlan(token)
+    planInfo.plan = data.plan
+    planInfo.consultas_restantes = data.consultas_restantes
+    planInfo.consultas_mes = data.consultas_mes
+    planInfo.max_api_keys = data.max_api_keys
+  } catch (err) {
+    console.error('Error cargando plan', err)
   }
 }
 
@@ -177,6 +245,26 @@ async function revocar(id) {
   }
 }
 
+async function iniciarPago(plan) {
+  var token = localStorage.getItem('gz_token')
+  try {
+    const { data } = await crearPago(token, plan)
+    localStorage.setItem('gz_pago_ref', data.referencia)
+    localStorage.setItem('gz_pago_plan', data.plan)
+    var url = 'https://checkout.wompi.co/p/' +
+      '?public-key=' + data.public_key +
+      '&currency=' + data.moneda +
+      '&amount-in-cents=' + data.monto +
+      '&reference=' + data.referencia +
+      '&signature:integrity=' + data.integrity +
+      '&redirect-url=' + encodeURIComponent(data.redirect_url)
+    window.location.href = url
+  } catch (err) {
+    var msg = err.response?.data?.detail || 'Error al iniciar pago'
+    showToast(msg, 'error')
+  }
+}
+
 function copiar(text) {
   navigator.clipboard.writeText(text)
   showToast('API Key copiada al portapapeles', 'success')
@@ -191,7 +279,7 @@ function cerrarSesion() {
 
 function showToast(msg, type) {
   toast.value = { visible: true, msg: msg, type: type }
-  setTimeout(() => { toast.value.visible = false }, 2800)
+  setTimeout(function() { toast.value.visible = false }, 2800)
 }
 </script>
 
@@ -270,6 +358,89 @@ function showToast(msg, type) {
   padding: 1px 7px;
   border-radius: 10px;
   font-size: 10px;
+}
+
+.plan-card {
+  background: #1a1a24;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 10px;
+}
+
+.plan-card.business {
+  border-color: rgba(124, 111, 255, 0.3);
+}
+
+.plan-card.enterprise {
+  border-color: rgba(0, 229, 160, 0.3);
+}
+
+.plan-name {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #7c6fff;
+  margin-bottom: 10px;
+}
+
+.plan-card.starter .plan-name { color: #6b6b80; }
+.plan-card.business .plan-name { color: #7c6fff; }
+.plan-card.enterprise .plan-name { color: #00e5a0; }
+
+.plan-consultas {
+  margin-bottom: 8px;
+}
+
+.plan-val {
+  font-size: 24px;
+  font-weight: 700;
+  color: #f0f0f5;
+}
+
+.plan-de {
+  font-size: 14px;
+  color: #4a4a5a;
+}
+
+.plan-bar-bg {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.plan-bar-fill {
+  height: 100%;
+  background: #00e5a0;
+  border-radius: 3px;
+  transition: width 0.3s;
+}
+
+.plan-bar-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  color: #4a4a5a;
+}
+
+.btn-upgrade {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(124, 111, 255, 0.15);
+  border: 1px solid rgba(124, 111, 255, 0.3);
+  color: #7c6fff;
+  font-family: 'Syne', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-upgrade:hover {
+  background: rgba(124, 111, 255, 0.25);
 }
 
 .key-card {
@@ -487,6 +658,7 @@ function showToast(msg, type) {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 14px;
+  margin-bottom: 24px;
 }
 
 .info-card {
@@ -516,6 +688,46 @@ function showToast(msg, type) {
   font-size: 12px;
   color: #6b6b80;
   line-height: 1.5;
+}
+
+.upgrade-banner {
+  background: #13131a;
+  border: 1px solid rgba(124, 111, 255, 0.25);
+  border-radius: 14px;
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.upgrade-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.upgrade-text {
+  font-size: 12px;
+  color: #6b6b80;
+}
+
+.btn-upgrade-lg {
+  padding: 12px 24px;
+  border-radius: 8px;
+  background: #7c6fff;
+  border: none;
+  color: white;
+  font-family: 'Syne', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+
+.btn-upgrade-lg:hover {
+  background: #9080ff;
 }
 
 .toast-msg {
