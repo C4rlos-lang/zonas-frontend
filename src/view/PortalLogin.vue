@@ -16,6 +16,7 @@
       <div class="tabs">
         <button class="tab" :class="{ active: modo === 'login' }" @click="modo = 'login'">Iniciar sesion</button>
         <button class="tab" :class="{ active: modo === 'registro' }" @click="modo = 'registro'">Registrarse</button>
+        <button class="tab" :class="{ active: modo === 'recuperar' }" @click="modo = 'recuperar'">Recuperar</button>
       </div>
 
       <div v-if="modo === 'registro'" class="form">
@@ -52,6 +53,26 @@
         <button class="btn-primary" @click="iniciarSesion" :disabled="loading">
           {{ loading ? 'Entrando...' : 'Iniciar sesion' }}
         </button>
+        <button class="btn-forgot" @click="modo = 'recuperar'">Olvidaste tu contrasena?</button>
+      </div>
+
+      <div v-if="modo === 'recuperar'" class="form">
+        <div class="recover-icon">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#7c6fff" stroke-width="1.5">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+        </div>
+        <div class="recover-title">Recuperar contrasena</div>
+        <div class="recover-sub">Ingresa tu email y te enviaremos un enlace para restablecer tu contrasena.</div>
+        <div class="field">
+          <label>Email</label>
+          <input v-model="recoverEmail" type="email" placeholder="tu@empresa.com" @keydown.enter="recuperar"/>
+        </div>
+        <button class="btn-primary" @click="recuperar" :disabled="loading">
+          {{ loading ? 'Enviando...' : 'Enviar enlace' }}
+        </button>
+        <button class="btn-back" @click="modo = 'login'">Volver al login</button>
       </div>
 
       <div v-if="mensaje.visible" class="msg" :class="mensaje.type">
@@ -79,12 +100,13 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { registro, login } from '../api/zonas.js'
+import { registro, login, recuperarPassword } from '../api/zonas.js'
 
 const router = useRouter()
 const modo = ref('login')
 const loading = ref(false)
 const mensaje = ref({ visible: false, text: '', type: '' })
+const recoverEmail = ref('')
 
 const reg = reactive({ nombre: '', empresa: '', email: '', password: '' })
 const log = reactive({ email: '', password: '' })
@@ -105,7 +127,7 @@ async function registrar() {
     localStorage.setItem('gz_cliente', JSON.stringify(data.cliente))
     localStorage.setItem('gz_api_key', data.api_key)
     showMsg('Registro exitoso. Tu API Key: ' + data.api_key, 'success')
-    setTimeout(() => {
+    setTimeout(function() {
       router.push('/portal/dashboard')
     }, 2000)
   } catch (err) {
@@ -133,9 +155,25 @@ async function iniciarSesion() {
   loading.value = false
 }
 
+async function recuperar() {
+  if (!recoverEmail.value) {
+    showMsg('Ingresa tu email', 'error')
+    return
+  }
+  loading.value = true
+  try {
+    await recuperarPassword(recoverEmail.value)
+    showMsg('Si el correo existe, recibiras un enlace para restablecer tu contrasena. Revisa tu bandeja de entrada.', 'success')
+    recoverEmail.value = ''
+  } catch (err) {
+    showMsg('Si el correo existe, recibiras un enlace para restablecer tu contrasena.', 'success')
+  }
+  loading.value = false
+}
+
 function showMsg(text, type) {
   mensaje.value = { visible: true, text: text, type: type }
-  setTimeout(() => { mensaje.value.visible = false }, 5000)
+  setTimeout(function() { mensaje.value.visible = false }, 6000)
 }
 </script>
 
@@ -201,7 +239,7 @@ function showMsg(text, type) {
   background: none;
   color: #6b6b80;
   font-family: 'Syne', sans-serif;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s;
@@ -274,6 +312,59 @@ function showMsg(text, type) {
 .btn-primary:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.btn-forgot {
+  background: none;
+  border: none;
+  color: #6b6b80;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  cursor: pointer;
+  text-align: center;
+  padding: 4px;
+  transition: color 0.15s;
+}
+
+.btn-forgot:hover {
+  color: #7c6fff;
+}
+
+.btn-back {
+  background: none;
+  border: none;
+  color: #6b6b80;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  cursor: pointer;
+  text-align: center;
+  padding: 4px;
+  transition: color 0.15s;
+}
+
+.btn-back:hover {
+  color: #f0f0f5;
+}
+
+.recover-icon {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.recover-title {
+  font-size: 16px;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+.recover-sub {
+  font-size: 12px;
+  color: #6b6b80;
+  text-align: center;
+  line-height: 1.5;
+  margin-bottom: 8px;
 }
 
 .msg {

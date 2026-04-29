@@ -752,4 +752,4 @@ function showToast(msg, type) {
   border: 1px solid rgba(255, 77, 106, 0.4);
   color: #ff4d6a;
 }
-</style>
+</style>  

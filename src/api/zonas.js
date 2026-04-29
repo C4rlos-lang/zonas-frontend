@@ -55,3 +55,7 @@ export const crearPago = (token, plan) => api.post('/pagos/crear', { plan: plan 
 export const verificarPago = (token, referencia) => api.get('/pagos/verificar/' + referencia, {
   headers: { 'Authorization': 'Bearer ' + token }
 })
+
+export const recuperarPassword = (email) => api.post('/auth/recuperar', { email: email })
+
+export const cambiarPassword = (accessToken, newPassword) => api.post('/auth/cambiar-password', { access_token: accessToken, new_password: newPassword })

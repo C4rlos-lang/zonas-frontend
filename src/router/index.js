@@ -4,11 +4,13 @@ import Admin from '../view/Admin.vue'
 import Verificador from '../view/Verificador.vue'
 import PortalLogin from '../view/PortalLogin.vue'
 import PortalDashboard from '../view/PortalDashboard.vue'
+import ResetPassword from '../view/ResetPassword.vue'
 import { validarToken } from '../api/zonas.js'
 
 const routes = [
   { path: '/', component: Landing, meta: { publica: true, landing: true } },
   { path: '/portal', component: PortalLogin, meta: { publica: true } },
+  { path: '/portal/reset', component: ResetPassword, meta: { publica: true } },
   { path: '/admin', component: Admin },
   { path: '/verificador', component: Verificador },
   { path: '/portal/dashboard', component: PortalDashboard }
