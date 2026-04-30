@@ -404,4 +404,31 @@ html, body {
 .session-btn-close:hover {
   background: rgba(255, 77, 106, 0.1);
 }
+
+.nav-sidebar.nav-collapsed {
+  width: 48px;
+  overflow: hidden;
+}
+
+.nav-sidebar.nav-collapsed .logo-info,
+.nav-sidebar.nav-collapsed .nav-section-label,
+.nav-sidebar.nav-collapsed .nav-item span,
+.nav-sidebar.nav-collapsed .nav-user,
+.nav-sidebar.nav-collapsed .btn-logout {
+  display: none;
+}
+
+.nav-sidebar.nav-collapsed .nav-logo {
+  padding: 16px 10px;
+  justify-content: center;
+}
+
+.nav-sidebar.nav-collapsed .nav-item {
+  padding: 9px;
+  justify-content: center;
+}
+
+.nav-sidebar.nav-collapsed .nav-footer {
+  display: none;
+}
 </style>
