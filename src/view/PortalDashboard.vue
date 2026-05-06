@@ -53,16 +53,6 @@
       </div>
 
       <div class="panel-section">
-        <div class="panel-label">Consumo</div>
-        <div class="stat-cards">
-          <div class="stat">
-            <div class="stat-val">{{ consumo.total }}</div>
-            <div class="stat-label">Peticiones totales</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="panel-section">
         <div class="panel-label">Documentacion rapida</div>
         <div class="doc-block">
           <div class="doc-title">Verificar punto</div>
@@ -135,12 +125,11 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { getMisKeys, crearMiKey, revocarMiKey, getMiConsumo, getMiPlan, crearPago, verificarPago } from '../api/zonas.js'
+import { getMisKeys, crearMiKey, revocarMiKey, getMiPlan, crearPago, verificarPago } from '../api/zonas.js'
 
 const router = useRouter()
 const cliente = ref({})
 const keys = ref([])
-const consumo = reactive({ total: 0 })
 const planInfo = reactive({ plan: 'starter', consultas_restantes: 0, consultas_mes: 1000, max_api_keys: 1 })
 const nuevaKeyNombre = ref('')
 const toast = ref({ visible: false, msg: '', type: '' })
@@ -159,7 +148,6 @@ onMounted(async function() {
   }
   cliente.value = JSON.parse(clienteStr)
   await cargarKeys()
-  await cargarConsumo()
   await cargarPlan()
 
   var pendingRef = localStorage.getItem('gz_pago_ref')
@@ -197,15 +185,7 @@ async function cargarKeys() {
   }
 }
 
-async function cargarConsumo() {
-  var token = localStorage.getItem('gz_token')
-  try {
-    const { data } = await getMiConsumo(token)
-    consumo.total = data.total
-  } catch (err) {
-    consumo.total = 0
-  }
-}
+
 
 async function cargarPlan() {
   var token = localStorage.getItem('gz_token')
