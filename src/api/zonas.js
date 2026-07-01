@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: 'https://zonas-app-production.up.railway.app'
+  baseURL: 'https://zonas-app.onrender.com'
 })
 
 const API_KEY = 'gz-2026-tr4nsporte-s3cur3'
